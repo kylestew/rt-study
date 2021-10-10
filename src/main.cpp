@@ -5,9 +5,39 @@
 #include "stb_image_write.h"
 #include "vec3.h"
 
+double hit_sphere(const point3& center, double radius, const ray& r) {
+    vec3 oc = r.origin() - center;
+    auto a = dot(r.direction(), r.direction());
+    auto b = 2 * dot(r.direction(), oc);
+    auto c = dot(oc, oc) - radius * radius;
+    auto discriminant = b * b - 4 * a * c;
+
+    if (discriminant < 0) {
+        return -1.0;
+    } else {
+        // return smallest root (assume closest t of hit point)
+        return (-b - sqrt(discriminant)) / (2.0 * a);
+    }
+}
+
 color ray_color(const ray& r) {
+    // render sphere?
+    vec3 C = point3(0, 0, -1);
+    double rad = 0.5;
+    auto t = hit_sphere(C, rad, r);
+    if (t > 0.0) {
+        // for a sphere:
+        // normal is in the direction from the center to the hit point
+        vec3 N = unit_vector(r.at(t) - C);
+        // map normal to visible colors
+        // map range: [-1, 1] -> [0, 1]
+        // map values: (x, y, z) -> (r, g, b)
+        return 0.5 * color(N.x() + 1, N.y() + 1, N.z() + 1);
+    }
+
+    // create gradient background
     vec3 unit_direction = unit_vector(r.direction());
-    auto t = 0.5 * (unit_direction.y() + 1.0);
+    t = 0.5 * (unit_direction.y() + 1.0);
     return (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0);
 }
 
@@ -44,6 +74,7 @@ int main() {
         }
     }
 
+    stbi_flip_vertically_on_write(1);
     return stbi_write_png("output.png", image_width, image_height, 3, &data,
                           sizeof(char) * 3 * image_width) != 0;
 }
