@@ -1,43 +1,21 @@
 #include <iostream>
-#define STB_IMAGE_WRITE_IMPLEMENTATION
+
 #include "color.h"
-#include "ray.h"
+#include "hittable_list.h"
+#include "sphere.h"
+#include "utility.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
-#include "vec3.h"
 
-double hit_sphere(const point3& center, double radius, const ray& r) {
-    vec3 oc = r.origin() - center;
-    auto a = dot(r.direction(), r.direction());
-    auto b = 2 * dot(r.direction(), oc);
-    auto c = dot(oc, oc) - radius * radius;
-    auto discriminant = b * b - 4 * a * c;
-
-    if (discriminant < 0) {
-        return -1.0;
-    } else {
-        // return smallest root (assume closest t of hit point)
-        return (-b - sqrt(discriminant)) / (2.0 * a);
-    }
-}
-
-color ray_color(const ray& r) {
-    // render sphere?
-    vec3 C = point3(0, 0, -1);
-    double rad = 0.5;
-    auto t = hit_sphere(C, rad, r);
-    if (t > 0.0) {
-        // for a sphere:
-        // normal is in the direction from the center to the hit point
-        vec3 N = unit_vector(r.at(t) - C);
-        // map normal to visible colors
-        // map range: [-1, 1] -> [0, 1]
-        // map values: (x, y, z) -> (r, g, b)
-        return 0.5 * color(N.x() + 1, N.y() + 1, N.z() + 1);
+color ray_color(const ray& r, const hittable& world) {
+    hit_record rec;
+    if (world.hit(r, 0, infinity, rec)) {
+        return 0.5 * (rec.normal + color(1, 1, 1));
     }
 
     // create gradient background
     vec3 unit_direction = unit_vector(r.direction());
-    t = 0.5 * (unit_direction.y() + 1.0);
+    auto t = 0.5 * (unit_direction.y() + 1.0);
     return (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0);
 }
 
@@ -46,6 +24,11 @@ int main() {
     const auto aspect_ratio = 16.0 / 9.0;
     const int image_width = 400;
     const int image_height = static_cast<int>(image_width / aspect_ratio);
+
+    // world
+    hittable_list world;
+    world.add(make_shared<sphere>(point3(0, 0, -1), 0.5));
+    world.add(make_shared<sphere>(point3(0, -100.5, -1), 100));
 
     // camera
     auto viewport_height = 2.0;
@@ -67,7 +50,7 @@ int main() {
             auto v = double(j) / (image_height - 1);
 
             ray r(origin, lower_left_corner + u * horizontal + v * vertical - origin);
-            color pixel_color = ray_color(r);
+            color pixel_color = ray_color(r, world);
 
             int off = (j * image_width + i) * 3;
             write_color(&data[off], pixel_color);
