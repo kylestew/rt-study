@@ -14,7 +14,7 @@ color ray_color(const ray& r, const hittable& world, int depth) {
     // if we've exceeded the ray bounce limit, no more light is gathered
     if (depth <= 0) return color(0, 0, 0);
 
-    if (world.hit(r, 0, infinity, rec)) {
+    if (world.hit(r, 0.001, infinity, rec)) {
         point3 target = rec.p + rec.normal + random_in_unit_sphere();
         return 0.5 * ray_color(ray(rec.p, target - rec.p), world, depth - 1);
     }
@@ -44,7 +44,7 @@ int main() {
     char data[image_width * image_height * 3];
 
     for (int j = image_height - 1; j >= 0; --j) {
-        std::cout << "\rScanlines remaining: " << j << ' ' << std::endl;
+        std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
         for (int i = 0; i < image_width; ++i) {
             color pixel_color(0, 0, 0);
             for (int s = 0; s < samples_per_pixel; ++s) {
@@ -61,4 +61,5 @@ int main() {
     stbi_flip_vertically_on_write(1);
     return stbi_write_png("output.png", image_width, image_height, 3, &data,
                           sizeof(char) * 3 * image_width) != 0;
+    std::cerr << "\nDone.\n";
 }
